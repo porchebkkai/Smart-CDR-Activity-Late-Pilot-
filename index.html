@@ -75,63 +75,64 @@
   </iframe>
 
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      // Updated Web App URL
-      const web_app_url = 'https://script.google.com/macros/s/AKfycbwqnqwUPXzbiDVDgBu12ogUFDyiwYlPhrGcrhVDd6zR2IhqpjAnVEe1JK-eKggrtkBT5A/exec';
+  document.addEventListener('DOMContentLoaded', function () {
+    const web_app_url = 'https://script.google.com/macros/s/AKfycbwqnqwUPXzbiDVDgBu12ogUFDyiwYlPhrGcrhVDd6zR2IhqpjAnVEe1JK-eKggrtkBT5A/exec';
 
-      function is_InAppBrowser() {
-        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-        const isChrome = /Chrome/i.test(userAgent) && !/Edg/i.test(userAgent);
-        return (
-          !isChrome &&
-          /FBAV|FBAN|LINE|Tiktok|Instagram|Twitter|Snapchat|Telegram|MicroMessenger|Pinterest|Reddit|Threads/i.test(userAgent)
-        );
-      }
+    function is_InAppBrowser() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      
+      // 1. Check specifically for LINE
+      const isLine = /Line/i.test(ua);
+      
+      // 2. Check for other social apps
+      const isSocial = /FBAV|FBAN|Tiktok|Instagram|Twitter|Snapchat|Telegram|MicroMessenger/i.test(ua);
+      
+      // 3. Return true if it is any of these
+      return isLine || isSocial;
+    }
 
-      const mainIframe = document.getElementById('mainIframe');
-      const urlParams = new URLSearchParams(window.location.search);
+    const mainIframe = document.getElementById('mainIframe');
+    const modal = document.getElementById('inAppBrowserModal');
+    const urlParams = new URLSearchParams(window.location.search);
 
-      // If explicitly opened in an external browser, just load the app
-      if (urlParams.has('openExternalBrowser')) {
-        mainIframe.src = web_app_url;
-        return;
-      }
+    // If the URL already has our "breakout" flag, load the app immediately
+    if (urlParams.has('openExternalBrowser')) {
+      mainIframe.src = web_app_url;
+      return;
+    }
 
-      if (is_InAppBrowser()) {
-        const modal = document.getElementById('inAppBrowserModal');
-        const confirmButton = document.getElementById('confirmButton');
-        const copyLinkButton = document.getElementById('copyLinkButton');
-        const copyMessage = document.getElementById('copyMessage');
+    if (is_InAppBrowser()) {
+      // SHOW WARNING: Hide app, show the modal
+      mainIframe.style.display = 'none';
+      modal.classList.remove('hidden');
 
-        const urlToRedirect = new URL(window.location.href);
-        urlToRedirect.searchParams.set('openExternalBrowser', '1');
+      const confirmButton = document.getElementById('confirmButton');
+      const copyLinkButton = document.getElementById('copyLinkButton');
 
-        // Show modal and hide iframe
-        modal.classList.remove('hidden');
-        mainIframe.classList.add('hidden');
+      // Create the breakout URL
+      const urlToRedirect = new URL(window.location.href);
+      urlToRedirect.searchParams.set('openExternalBrowser', '1');
 
-        confirmButton.addEventListener('click', function () {
-          window.location.href = urlToRedirect.toString();
-        });
+      confirmButton.addEventListener('click', function () {
+        // This triggers the reload. On many devices, the ?openExternalBrowser=1 
+        // tells the app "Get out of here and go to Chrome/Safari"
+        window.location.href = urlToRedirect.toString();
+      });
 
-        copyLinkButton.addEventListener('click', async function () {
-          try {
-            await navigator.clipboard.writeText(urlToRedirect.toString());
-            copyMessage.textContent = 'คัดลอกแล้ว!';
-            copyMessage.classList.remove('hidden');
-            setTimeout(() => copyMessage.classList.add('hidden'), 2000);
-          } catch (err) {
-            copyMessage.textContent = 'ไม่สามารถคัดลอกได้!';
-            copyMessage.classList.remove('hidden');
-            console.error('Failed to copy text:', err);
-            setTimeout(() => copyMessage.classList.add('hidden'), 2000);
-          }
-        });
-      } else {
-        // Not an in-app browser: load directly
-        mainIframe.src = web_app_url;
-      }
-    });
-  </script>
+      copyLinkButton.addEventListener('click', async function () {
+        try {
+          await navigator.clipboard.writeText(urlToRedirect.toString());
+          document.getElementById('copyMessage').classList.remove('hidden');
+          setTimeout(() => document.getElementById('copyMessage').classList.add('hidden'), 2000);
+        } catch (err) {
+          console.error('Failed to copy', err);
+        }
+      });
+    } else {
+      // NORMAL BROWSER: Load app directly
+      mainIframe.src = web_app_url;
+    }
+  });
+</script>
 </body>
 </html>
