@@ -76,60 +76,57 @@
 
   <script>
   document.addEventListener('DOMContentLoaded', function () {
+    // 1. Your Smart CDR App URL
     const web_app_url = 'https://script.google.com/macros/s/AKfycbwqnqwUPXzbiDVDgBu12ogUFDyiwYlPhrGcrhVDd6zR2IhqpjAnVEe1JK-eKggrtkBT5A/exec';
 
-    function is_InAppBrowser() {
-      const ua = navigator.userAgent || navigator.vendor || window.opera;
-      
-      // 1. Check specifically for LINE
-      const isLine = /Line/i.test(ua);
-      
-      // 2. Check for other social apps
-      const isSocial = /FBAV|FBAN|Tiktok|Instagram|Twitter|Snapchat|Telegram|MicroMessenger/i.test(ua);
-      
-      // 3. Return true if it is any of these
-      return isLine || isSocial;
-    }
-
+    // 2. Setup Elements
     const mainIframe = document.getElementById('mainIframe');
     const modal = document.getElementById('inAppBrowserModal');
-    const urlParams = new URLSearchParams(window.location.search);
+    const confirmButton = document.getElementById('confirmButton');
+    const copyLinkButton = document.getElementById('copyLinkButton');
+    const copyMessage = document.getElementById('copyMessage');
 
-    // If the URL already has our "breakout" flag, load the app immediately
+    // 3. Logic: Check if we are ALREADY in the breakout browser
+    const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('openExternalBrowser')) {
       mainIframe.src = web_app_url;
-      return;
+      mainIframe.classList.remove('hidden');
+      return; // Stop here, don't show the warning
+    }
+
+    // 4. Logic: Detect In-App Browsers (LINE, FB, etc.)
+    function is_InAppBrowser() {
+      const ua = navigator.userAgent || navigator.vendor || window.opera;
+      return /Line|FBAV|FBAN|Tiktok|Instagram|Twitter|Threads/i.test(ua);
     }
 
     if (is_InAppBrowser()) {
-      // SHOW WARNING: Hide app, show the modal
-      mainIframe.style.display = 'none';
+      // Show Warning Page
+      mainIframe.classList.add('hidden');
       modal.classList.remove('hidden');
 
-      const confirmButton = document.getElementById('confirmButton');
-      const copyLinkButton = document.getElementById('copyLinkButton');
-
-      // Create the breakout URL
+      // Create the link that forces LINE to open externally
       const urlToRedirect = new URL(window.location.href);
       urlToRedirect.searchParams.set('openExternalBrowser', '1');
 
+      // Button Click: OPEN BROWSER
       confirmButton.addEventListener('click', function () {
-        // This triggers the reload. On many devices, the ?openExternalBrowser=1 
-        // tells the app "Get out of here and go to Chrome/Safari"
         window.location.href = urlToRedirect.toString();
       });
 
+      // Button Click: COPY LINK (Fail-safe)
       copyLinkButton.addEventListener('click', async function () {
         try {
           await navigator.clipboard.writeText(urlToRedirect.toString());
-          document.getElementById('copyMessage').classList.remove('hidden');
-          setTimeout(() => document.getElementById('copyMessage').classList.add('hidden'), 2000);
+          copyMessage.classList.remove('hidden');
+          setTimeout(() => copyMessage.classList.add('hidden'), 2500);
         } catch (err) {
-          console.error('Failed to copy', err);
+          copyMessage.textContent = "กรุณาคัดลอกลิงก์จากแถบที่อยู่";
+          copyMessage.classList.remove('hidden');
         }
       });
     } else {
-      // NORMAL BROWSER: Load app directly
+      // We are in a normal browser: Load the App directly
       mainIframe.src = web_app_url;
     }
   });
